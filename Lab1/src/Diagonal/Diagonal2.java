@@ -18,31 +18,29 @@ public class Diagonal2 {
 		int nTimes = Integer.parseInt(arg[1]); //nTimes
 		int option = Integer.parseInt(arg[0]); //selected option
 		long t1=0,t2 =0;
-		int s1 = 0;
-		int matrix[][];
-		
+		int s1 = 0;		
 		for (int n=3; n<=1000; n*=2){//n is incremented * 2
-			matrix= new int[n][n];
+			a= new int[n][n];
 		   if (option==0){ //fill in the matrix
 			   t1 = System.currentTimeMillis();
 			   for (int repetition=1; repetition<=nTimes; repetition++){    	
-				     Diagonal1.fillIn(matrix);
+				     Diagonal1.fillIn(a);
 			   }
 			   t2 = System.currentTimeMillis();
 		   } //if
 		   else if (option==1) { //sum of the diagonal (one way)
 			   t1 = System.currentTimeMillis();
 			   for (int repetition=1; repetition<=nTimes; repetition++){
-				   Diagonal1.fillIn(matrix);
-				   s1 = Diagonal1.sum1Diagonal(matrix);
+				   Diagonal1.fillIn(a);
+				   s1 = Diagonal1.sum1Diagonal(a);
 			   }
 			   t2 = System.currentTimeMillis();
 		   } //else if
 		   else if (option==2) { //sum of the diagonal (another way)
 			   t1 = System.currentTimeMillis();
 			   for (int repetition=1; repetition<=nTimes; repetition++){    	
-				   Diagonal1.fillIn(matrix);
-				   s1 = Diagonal1.sum1Diagonal(matrix);
+				   Diagonal1.fillIn(a);
+				   s1 = Diagonal1.sum1Diagonal(a);
 			   }
 			   t2 = System.currentTimeMillis();
 		   } //else if
