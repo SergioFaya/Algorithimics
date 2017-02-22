@@ -1,0 +1,662 @@
+			// All variables *Left or *Top are text, with units of 'px', initially set for each image element in the HTML.
+			// Variables *X or *Y are numeric values but should correspond to px.
+			// Variables *I or *J are also numeric and represent grid positions.
+			var selectedObj;	// References a tile being moved onto the playing board; it's one of several tiles, stacked in five groups so most aren't visible.
+			var offsetX, offsetY;	// Location of click relative to tile selected, referenced to window (keeps tile positioned with mouse movement).
+			var previousLeft, previousTop;	// Stores location of tile that's been selected, so it can be moved back if necessary.
+			var grid;	//	Array to hold filled/unfilled status of grid cells.
+			var squareObj;	// used to verify that square is first moved
+			var tileStack = new Array(4);	// Linear arrays of tile references for use in solving the puzzle.
+			var tileStackPointer = new Array(4);	// Indices into the above arrays.
+			var trominoesRemaining, moves; // Counters.
+			// The following reference elements surrounding message and status text
+			var message, statusTrominoesRemaining, statusPluralRemaining, statusTrominoesUsed, statusPluralUsed, statusMoves, statusPluralMoves;
+
+			var puzzleSizeI = puzzleSizeJ = 8;
+			var squareCount = (puzzleSizeI * puzzleSizeJ)%3;	// Number of squares required to leave a multiple of 3 cells uncovered.
+			var tileStackCount = Math.floor((puzzleSizeI * puzzleSizeJ)/4);	// Number of trominos required for maximal coverage with single orientation.
+			var squareSize = 35;	// Size of square image.
+			var trominoSize = 2 * squareSize + 2;	// Has extra width to cross extra border between grid cells.
+			var gridSpacing = squareSize + 2;	// A standard length for placing items, based on square image + extra border in grid.
+			var gridSizeX = puzzleSizeI * gridSpacing;	// X-Size of playing area.
+			var gridSizeY = puzzleSizeJ * gridSpacing;	// Y-Size of playing area.
+
+			var tileBaseLeft = tileBaseTopNW = squareBaseTop = gridSpacing + 'px';	// Tile reservoir positions
+			var tileBaseTopNE = squareBaseLeft = 4 * gridSpacing + 'px';
+			var tileBaseTopSE = 7 * gridSpacing + 'px';
+			var tileBaseTopSW = 10 * gridSpacing + 'px';
+			var gridBaseX = 4 * gridSpacing;
+			var gridBaseY = 3 * gridSpacing;
+			var gridLowerX = gridBaseX - gridSpacing/2;		// Limits for placement of tiles on board; otherwise put back.
+			var gridLowerY = gridBaseY - gridSpacing/2;
+			var gridUpperX = gridBaseX + gridSizeX + gridSpacing/2;
+			var gridUpperY = gridBaseY + gridSizeY + gridSpacing/2;
+
+			var trominoesTotal = Math.floor(puzzleSizeI * puzzleSizeJ / 3);
+			var allDone = false;	// Game completed; this can be done if a tile is removed from the board.
+			var	messageBegin = 'Begin by placing the white tile on one of the 64 grid squares.';
+			var messageFillTheGrid = 'Fill the grid with trominoes until no empty cells remain.';
+			var messageSolvedPuzzle = 'Congratulations! You solved the puzzle.';
+			var	messageFindingSolution = 'Finding a solution...';
+			var messageOneSolution = 'Here\'s one solution!';
+
+			function isDone()	// checks to see if all grid squares are marked done
+			{
+				if (allDone) return true;
+				for (var i = 0; i < puzzleSizeI; i++)
+					for (var j = 0; j < puzzleSizeJ; j++)
+						if (!grid[i][j].filled)
+							return false;
+				return allDone = true;
+			}	// isDone()
+
+			// These functions take this tile and set the grid cells under it as filled (state == this) or unfilled (state == null)
+			function setGridFillNW()	// |~
+			{
+				grid[this.indexI][this.indexJ + 1].filled =
+				grid[this.indexI][this.indexJ].filled =
+				grid[this.indexI + 1][this.indexJ].filled =
+					arguments.length ? arguments[0] : this;
+			}
+
+			function setGridFillNE()	// ~|
+			{
+				grid[this.indexI][this.indexJ].filled =
+				grid[this.indexI + 1][this.indexJ].filled =
+				grid[this.indexI + 1][this.indexJ + 1].filled =
+					arguments.length ? arguments[0] : this;
+			}
+
+			function setGridFillSE()	// _|
+			{
+				grid[this.indexI + 1][this.indexJ].filled =
+				grid[this.indexI + 1][this.indexJ + 1].filled =
+				grid[this.indexI][this.indexJ + 1].filled =
+					arguments.length ? arguments[0] : this;
+			}
+
+			function setGridFillSW()	// |_
+			{
+				grid[this.indexI + 1][this.indexJ + 1].filled =
+				grid[this.indexI][this.indexJ + 1].filled =
+				grid[this.indexI][this.indexJ].filled =
+					arguments.length ? arguments[0] : this;
+			}
+
+			function setGridFillSquare()
+			{
+				grid[this.indexI][this.indexJ].filled = arguments.length ? arguments[0] : this;
+			}
+
+			// These functions check if the grid has room for this tile
+			function canFitGridNW(indexI, indexJ)	// |~
+			{
+				return (grid[indexI][indexJ + 1].filled ||
+					grid[indexI][indexJ].filled ||
+					grid[indexI + 1][indexJ].filled) ? false : true;
+			}
+
+			function canFitGridNE(indexI, indexJ)	// ~|
+			{
+				return (grid[indexI][indexJ].filled ||
+					grid[indexI + 1][indexJ].filled ||
+					grid[indexI + 1][indexJ + 1].filled) ? false : true;
+			}
+
+			function canFitGridSE(indexI, indexJ)	// _|
+			{
+				return (grid[indexI + 1][indexJ].filled ||
+					grid[indexI + 1][indexJ + 1].filled ||
+					grid[indexI][indexJ + 1].filled) ? false : true;
+			}
+
+			function canFitGridSW(indexI, indexJ)	// |_
+			{
+				return (grid[indexI + 1][indexJ + 1].filled ||
+					grid[indexI][indexJ + 1].filled ||
+					grid[indexI][indexJ].filled) ? false : true;
+			}
+
+			function canFitGridSquare(indexI, indexJ)
+			{
+				return grid[indexI][indexJ].filled ? false : true;
+			}
+
+			// If the transparent area of a tromino is clicked,
+			// these functions look on the grid to find the underlying tromino covering that cell (if any)
+			// But if in the reservoir, ignore clicks.
+			function getTransparentAreaNW()	// |~
+			{
+				return this.onGrid() ? grid[this.indexI + 1][this.indexJ + 1].filled : null;
+			}
+
+			function getTransparentAreaNE()	// ~|
+			{
+				return this.onGrid() ? grid[this.indexI][this.indexJ + 1].filled : null;
+			}
+
+			function getTransparentAreaSE()	// _|
+			{
+				return this.onGrid() ? grid[this.indexI][this.indexJ].filled : null;
+			}
+
+			function getTransparentAreaSW()	// |_
+			{
+				return this.onGrid() ? grid[this.indexI + 1][this.indexJ].filled : null;
+			}
+
+			function placeOnGrid(indexI, indexJ)
+			{
+				this.style.left = grid[indexI][indexJ].xcoor + 'px';
+				this.style.top = grid[indexI][indexJ].ycoor + 'px';
+				this.indexI = indexI;
+				this.indexJ = indexJ;
+				this.setGridFill();
+			}
+
+			function onGrid()
+			{
+				return this.indexI != -1;
+			}
+
+			// Return tile to its reservoir base position.
+			function reserve()
+			{
+				this.style.left = this.baseLeft;
+				this.style.top = this.baseTop;
+				this.indexI = this.indexJ = -1;
+			}
+
+			function removeFromGrid()
+			{
+				this.setGridFill(null);
+				this.reserve();
+			}
+
+			function setTrominoesRemaining(increment)	// this function sets the form counters to the proper numbers
+			{
+				statusTrominoesRemaining.firstChild.nodeValue = trominoesRemaining += increment;
+				statusPluralRemaining.firstChild.nodeValue = trominoesRemaining == 1 ? '' : 'es';
+
+				var trominoesUsed = trominoesTotal - trominoesRemaining;
+				statusTrominoesUsed.firstChild.nodeValue = trominoesUsed;
+				statusPluralUsed.firstChild.nodeValue = trominoesUsed == 1 ? '' : 'es';
+			}
+
+			// This function expects a quad (power-of-two-square) that has one cell filled, either by the single square or
+			// one third of a center-wrapping tromino; it then adds a center-wrapping tromino within this quad to break it into subquads,
+			// and passes them to itself recursively.
+			function recursInductive(i, j, size)	// (i, j) = absolute position of filled cell; size = linear dimension of this quad
+			{
+				// Relative position of filled cell within this quad:
+				var iOffset = i%size;
+				var jOffset = j%size;
+				// Subquad of filled cell within this quad:
+				var quadI = Math.floor(2*iOffset/size);
+				var quadJ = Math.floor(2*jOffset/size);
+
+				// Place center-wrapping tromino:
+				var s = quadI - quadJ - 2 * quadI * quadJ + 2;
+				var i0 = i - iOffset + size/2 - 1;
+				var j0 = j - jOffset + size/2 - 1;
+				tileStack[s][tileStackPointer[s]--].placeOnGrid(i0, j0);
+				statusMoves.firstChild.nodeValue = ++moves;
+				setTrominoesRemaining(-1);
+
+				if (size == 2) return;
+
+				// Fill each subquad:
+				for (var p = 0, q; p < 2; p++)
+					for (q = 0; q < 2; q++)
+						if (p == quadI && q == quadJ)
+							recursInductive(i, j, size/2);
+						else
+							recursInductive(i0 + p, j0 + q, size/2);
+			}
+
+			function startOver()	// Returns all trominoes to their default locations.
+			{
+				for (var i = 0, j; i < puzzleSizeI; i++)
+					for (j = 0; j < puzzleSizeJ; j++)
+						if (grid[i][j].filled)
+							grid[i][j].filled.removeFromGrid();
+
+				allDone = false;
+				statusMoves.firstChild.nodeValue = moves = 0;
+				statusPluralMoves.firstChild.nodeValue = 's';
+				statusTrominoesRemaining.firstChild.nodeValue = trominoesRemaining = trominoesTotal;
+				setTrominoesRemaining(0);
+				message.firstChild.nodeValue = messageBegin;
+				message.style.color = 'black';
+			}
+
+			function solveInductive()
+			{
+				var messageSolution;
+
+				if (!squareObj.onGrid() || trominoesRemaining != trominoesTotal)	// Square not sole tile placed on grid
+				{
+					startOver();
+					squareObj.placeOnGrid(Math.floor(puzzleSizeI * Math.random()), Math.floor(puzzleSizeJ * Math.random()));
+					statusMoves.firstChild.nodeValue = moves = 1;
+					statusPluralMoves.firstChild.nodeValue = '';
+					messageSolution = messageOneSolution;
+				}
+				else	// Square already in place, only one possible solution
+					messageSolution = 'Here\'s the solution!';
+
+				if (puzzleSizeI != 1)
+				{
+					message.firstChild.nodeValue = messageFindingSolution;
+					message.style.color = 'orange';
+					for (var s = 0; s < 4; s++)
+						tileStackPointer[s] = tileStackCount - 1;
+					statusPluralMoves.firstChild.nodeValue = 's';	// moves will shortly be incremented
+					recursInductive(squareObj.indexI, squareObj.indexJ, puzzleSizeI);
+				}
+
+				message.firstChild.nodeValue = messageSolution;
+				message.style.color = 'green';
+			}	// function solveInductive
+
+			function recursRandom(i, j)	// The iterative solution finder with random tile choices.
+			{
+				if (grid[i][j].filled)
+				{
+					// Try next site:
+					if (++j == puzzleSizeJ)	// End of column or end of puzzle?
+					{
+						if (++i == puzzleSizeI)	// Puzzle is solved!
+						{
+							message.firstChild.nodeValue = messageOneSolution;
+							message.style.color = 'green';
+							return true;
+						}
+						j = 0;
+					}
+					return recursRandom(i, j);	// If false, can't fix it here, as it was filled at a higher level.
+				}
+				// else try to fill this site.
+
+				if (moves >= 100000)	// Script run amok
+				{
+					message.firstChild.nodeValue = 'Taking too much time to find a solution; canceling.';
+					message.style.color = 'red';
+					return false;
+				}
+
+				for (var ss = 0, s = Math.floor(4 * Math.random()); ss < 4; ss++, s = ++s%4)
+					// Try each tromino orientation to see if it fits; start with random orientation to vary colors.
+				{
+					var currentObj = tileStack[s][tileStackPointer[s]];
+
+					for (var p = 0; p < 4; p++)	// Try each tromino displacement from base position to see if it fits.
+					{
+						if (currentObj.baseCellCovered[p])
+						{
+							var indexI = i - Math.floor(p/2);
+							var indexJ = j - p % 2;
+							if (indexI >= 0 && indexI <= puzzleSizeI - 2 && indexJ >= 0 && indexJ <= puzzleSizeJ - 2 &&
+								currentObj.canFitGrid(indexI, indexJ))
+							{
+								currentObj.placeOnGrid(indexI, indexJ);
+								statusMoves.firstChild.nodeValue = ++moves;
+								statusPluralMoves.firstChild.nodeValue = 's';
+								setTrominoesRemaining(-1);
+								tileStackPointer[s]--;
+
+								var iNext, jNext = j + 1;
+								if (jNext == puzzleSizeJ)	// End of column; should never be end of puzzle, because filled from earlier cells.
+								{
+									jNext = 0;
+									iNext = i + 1;
+								}
+								else
+									iNext = i;
+								if (recursRandom(iNext, jNext))
+									return true;
+								// else this configuration doesn't work, ultimately
+								currentObj.removeFromGrid();
+								setTrominoesRemaining(+1);
+								tileStackPointer[s]++;
+							}	// if (currentObj.canFitGrid())
+						}	// if (currentObj.baseCellCovered[p])
+						// Current configuration doesn't work, so try next orientation/displacement.
+					}	// for (p ...)
+				}	// for (s ...)
+				// Tried all four tromino orientations and positions and none fit; need to back up.
+				if (i == 0 && j == 0)	// Already backed up all the way to first cell; no solution possible
+				{
+					message.firstChild.nodeValue = 'No solution found!';
+					message.style.color = 'red';
+				}
+				return false;
+			}	// function recursRandom()
+			
+			function TileState(baseCellCovered, indexI, indexJ)	// Constructor to track tile type (s) and position on grid (indexI, indexJ)
+			{
+				this.baseCellCovered = baseCellCovered;
+				this.indexI = indexI;
+				this.indexJ = indexJ;
+			}
+			
+			function initRandom(indexI, indexJ)
+			{
+				var reflect;
+
+				if (indexI >= puzzleSizeI/2)	// Reflect left-right to bring square closer to origin to reduce calculation time.
+				{
+					indexI = puzzleSizeI - 1 - indexI;
+					reflect = true;
+				}
+				else
+					reflect = false;
+
+				squareObj.setGridFill(null);
+				squareObj.placeOnGrid(indexI, indexJ);
+				statusMoves.firstChild.nodeValue = moves = 1;
+				statusPluralMoves.firstChild.nodeValue = '';
+
+				recursRandom(0, 0);
+
+				if (reflect)
+				{
+					var i, j, s, t, currentObj;
+					var tileTracker = new Array(trominoesTotal);	// Tracks trominoes used, before restoring to the reserve
+	
+					squareObj.setGridFill(null);
+					for (i = 0, t = 0; i < puzzleSizeI; i++)
+						for (j = 0; j < puzzleSizeJ; j++)
+						{
+							if (!grid[i][j].filled)
+								continue;
+							currentObj = grid[i][j].filled;
+							tileTracker[t++] = new TileState(currentObj.baseCellCovered, currentObj.indexI, currentObj.indexJ);
+							currentObj.removeFromGrid();
+						}
+
+					for (s = 0; s < 4; s++)
+						tileStackPointer[s] = tileStackCount - 1;
+	
+					squareObj.placeOnGrid(puzzleSizeI - 1 - indexI, indexJ);
+					for (t = 0; t < trominoesTotal; t++)
+					{	// This linear relationship uses the array baseCellCovered[], unique to each orientation, to determine into which tromino to reflect
+						s = -tileTracker[t].baseCellCovered[0] + 2 * tileTracker[t].baseCellCovered[1] + tileTracker[t].baseCellCovered[3];						
+						tileStack[s][tileStackPointer[s]--].placeOnGrid(puzzleSizeI - tileTracker[t].indexI - 2, tileTracker[t].indexJ);
+					}
+				}
+			}
+			
+			function solveRandom()	// Mostly brute force, but generally applicable to any size puzzle.
+			{
+				var indexI, indexJ;
+
+				if (squareObj.onGrid())	// Square already on grid; restore there before solving
+				{
+					indexI = squareObj.indexI;
+					indexJ = squareObj.indexJ;
+				}
+				else
+				{
+					indexI = Math.floor(puzzleSizeI * Math.random());
+					indexJ = Math.floor(puzzleSizeJ * Math.random());
+				}
+
+				startOver();
+				squareObj.placeOnGrid(indexI, indexJ);
+				message.firstChild.nodeValue = messageFindingSolution;
+				message.style.color = 'orange';
+				for (var s = 0; s < 4; s++)
+					tileStackPointer[s] = tileStackCount - 1;
+
+				window.setTimeout('initRandom(' + indexI + ', ' + indexJ + ')', 0);	// The timeout allows the steps above to complete their display.
+			}
+
+			// pickUp is used when the mouse clicks on an image; it is only called if selectedObj exists.
+			// If the tile was already on the grid, it finds its index (indexI, indexJ), and "removes it" as a placed tile.
+			function pickUp()
+			{
+				// Remember it in case it needs to be put back:
+				previousLeft = selectedObj.style.left;
+				previousTop = selectedObj.style.top;
+
+				if (selectedObj.onGrid())	// Remove it, but don't reset (selectedObj.indexI, selectedObj.indexJ) so we recognize it as previously placed
+				{
+					selectedObj.setGridFill(null);
+					if (selectedObj != squareObj)
+					{
+						setTrominoesRemaining(+1);
+						allDone = false;
+					}
+				}
+				else if (selectedObj == squareObj)	// First move; offer random placement.
+				{
+					message.firstChild.nodeValue = "Release off-grid for random placement and save a move!";
+					message.style.color = 'blue';
+				}
+			}	// pickUp()
+
+			// if the piece is near or on the grid, this function locates the correct position and returns it as an array of two indices.
+			function snapToGrid()
+			{
+				var lowerX = parseInt(selectedObj.style.left);
+				var upperX = lowerX + parseInt(selectedObj.style.width);
+				var lowerY = parseInt(selectedObj.style.top);
+				var upperY = lowerY + parseInt(selectedObj.style.height);
+
+				if (lowerX <= gridLowerX || upperX >= gridUpperX || lowerY <= gridLowerY || upperY >= gridUpperY)	// Off the grid.
+					return null;
+
+				// These two positions are the nearest grid positions.
+				// They are used by canFitGrid...() and, if true, by setGridFill...() in the next step or two.
+				return [Math.round((lowerX - gridBaseX)/gridSpacing, 0), Math.round((lowerY - gridBaseY)/gridSpacing, 0)];
+			}	// snapToGrid
+
+			// this function determines if the tile can be dropped at this point;
+			// if not, it puts it back where it started
+			function drop()
+			{
+				var index;
+
+				if (!squareObj.onGrid() && selectedObj != squareObj)
+				{
+					selectedObj.style.left = previousLeft;
+					selectedObj.style.top = previousTop;
+					message.firstChild.nodeValue = 'Please start with the square white tile.';
+					message.style.color = 'red';
+					return false;
+				}
+
+				if (index = snapToGrid())	// destination on the board, found closest cell index = [indexI, indexJ] to image position
+				{
+					if (selectedObj.canFitGrid(index[0], index[1]))
+					{
+						selectedObj.placeOnGrid(index[0], index[1]);
+						if (selectedObj.style.left != previousLeft || selectedObj.style.top != previousTop)
+						{
+							statusMoves.firstChild.nodeValue = ++moves;
+							statusPluralMoves.firstChild.nodeValue = moves == 1 ? '' : 's';
+						}
+						if (selectedObj != squareObj)
+							setTrominoesRemaining(-1);
+
+						if (isDone())
+						{
+							message.firstChild.nodeValue = messageSolvedPuzzle;
+							message.style.color = 'green';
+						}
+						else
+						{
+							message.firstChild.nodeValue = messageFillTheGrid;
+							message.style.color = 'black';
+						}
+						return true;
+					}
+					else		// Squares not free, send back
+					{
+						selectedObj.style.left = previousLeft;
+						selectedObj.style.top = previousTop;
+						if (selectedObj.onGrid())	// Already on the grid; refill previous squares
+						{
+							selectedObj.setGridFill();
+							if (selectedObj != squareObj)	// if one of the trominoes, change counter
+								setTrominoesRemaining(-1);
+						}
+						if (!allDone)
+						{
+							message.firstChild.nodeValue = 'That cell is taken, try again.';
+							message.style.color = 'red';
+						}
+						return false;
+					}
+				}
+				else	// Off the board
+				{
+					if (selectedObj == squareObj)
+					{
+						if (squareObj.onGrid())	// Already on the board, square should stay there.
+						{
+							squareObj.style.left = previousLeft;
+							squareObj.style.top = previousTop;
+							squareObj.setGridFill();
+							if (allDone)
+							{
+								message.firstChild.nodeValue = messageSolvedPuzzle;
+								message.style.color = 'green';
+							}
+							else
+							{
+								message.firstChild.nodeValue = messageFillTheGrid;
+								message.style.color = 'black';
+							}
+							return false;
+						}
+						else	// First move, provide random placement.
+						{
+							squareObj.placeOnGrid(Math.floor(puzzleSizeI * Math.random()), Math.floor(puzzleSizeJ * Math.random()));
+							message.firstChild.nodeValue = messageFillTheGrid;
+							message.style.color = 'black';
+							return true;
+						}
+					}
+					else	// A tromino; return to reservoir.
+					{
+						selectedObj.reserve();
+						message.firstChild.nodeValue = messageFillTheGrid;
+						message.style.color = 'black';
+						return false;
+					}
+				}
+			}	// drop()
+
+			function engage(eventW3C)	// Turn selected element "on", if appropriate
+			{
+				var evt, target;
+
+				if (eventW3C)
+				{
+					evt = eventW3C;
+					target = evt.target
+				}
+				else if (event)	// IE
+				{
+					evt = event;
+					target = evt.srcElement;
+				}
+				else
+					return;
+
+				if (target.className != 'tile' && target.className != 'transparent') return;
+
+				selectedObj = target.parentNode.parentNode;	// Hierarchy is <div><map><area>
+
+				if (target.className == 'transparent' &&	//	Clicked on transparent portion of rectangular tromino image.
+					!(selectedObj = selectedObj.getTransparentArea()))	// Transparent area is over an empty cell; ignore click.
+						return;
+
+				offsetX = evt.clientX - parseInt(selectedObj.style.left);
+				offsetY = evt.clientY - parseInt(selectedObj.style.top);
+
+				selectedObj.style.zIndex = 100;	// Moves to front.
+
+				pickUp();
+				return false;
+			}
+
+			function dragIt(eventW3C)	// Drag a previously engaged element
+			{
+				if (selectedObj)
+				{
+					var evt = eventW3C ? eventW3C : event;
+
+					selectedObj.style.left = (evt.clientX - offsetX) + 'px';
+					selectedObj.style.top = (evt.clientY - offsetY) + 'px';
+					if (eventW3C)
+						evt.stopPropagation();
+					else	// IE
+						evt.cancelBubble = true;
+				}
+			}
+
+			function release(eventW3C)	// Turn previously engaged element off
+			{
+				if (selectedObj)
+				{
+					drop();
+					selectedObj.style.zIndex = 10;	// Moves to original layer.
+					selectedObj = null;
+				}
+			}
+
+			function initEventHandlers()	// Assign event handlers
+			{
+				document.onmousedown = engage;
+				document.onmousemove = dragIt;
+				document.onmouseup = release;
+			}
+
+			// Constructor for the cells in the grid
+			// Assigns the coordinates of each cell, both relative to the grid (0, 0) - (7, 7) and relative to the playing area (xcoor, ycoor).
+			// Also tracks whether it's filled or not.
+			function Cell(indexI, indexJ)
+			{
+				this.xcoor = gridBaseX + gridSpacing * indexI;
+				this.ycoor = gridBaseY + gridSpacing * indexJ;
+				this.filled = null;	// if not null, points to filling tile object
+			}
+
+			// Constructor for the grid, an array of cells
+			function Grid(sizeI, sizeJ)
+			{
+				this.length = sizeI;
+
+				for (var i = 0, column; i < sizeI; i++)
+				{
+					column = new Array(sizeJ);
+					for (var j = 0; j < sizeJ; j++)
+						column[j] = new Cell(i, j);
+					this[i] = column;
+				}
+			}
+
+			Grid.prototype = new Array();	// Creates a copy of the base class Array that can be extended with Grid()
+
+			function init()
+			{
+				initEventHandlers();
+				grid = new Grid(puzzleSizeI, puzzleSizeJ);
+
+				statusMoves = document.getElementById('moves');
+				statusPluralMoves = document.getElementById('pluralMoves');
+				statusTrominoesUsed = document.getElementById('trominoesused');
+				statusPluralUsed = document.getElementById('pluralUsed');
+				statusTrominoesRemaining = document.getElementById('trominoesremaining');
+				statusPluralRemaining = document.getElementById('pluralRemaining');
+
+				statusMoves.firstChild.nodeValue = moves = 0;
+				statusPluralMoves.firstChild.nodeValue = 's';
+				statusTrominoesRemaining.firstChild.nodeValue = trominoesRemaining = trominoesTotal;
+				setTrominoesRemaining(0);
+				message.firstChild.nodeValue = messageBegin;
+				message.style.color = 'black';
+			}
