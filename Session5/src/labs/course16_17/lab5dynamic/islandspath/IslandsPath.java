@@ -1,6 +1,7 @@
 package labs.course16_17.lab5dynamic.islandspath;
 
 import java.io.IOException;
+import java.*;
 
 public class IslandsPath {
 
@@ -13,21 +14,43 @@ public class IslandsPath {
 		optimal = new int[matrix.length][matrix.length];
 		paths = new int[matrix.length][matrix.length];
 	}
+	
 
 	public int sumCostsMatrix() {
-		// TODO Auto-generated method stub
-		return 0;
+		int c=0;
+		for (int i = 0; i < matrix.length; i++) {
+			for (int j = 0; j < matrix.length; j++) {
+				c+= matrix[i][j];
+			}
+		}
+		return c;
 	}
 
 	public void calculateMaximumWidths() {
-		// TODO Auto-generated method stub
-		
+		for (int i = 0; i < matrix.length; i++) {
+			for (int j = 0; j < matrix.length; j++) {
+				paths[i][j]=-1;
+			}
+		}
+		int min;
+		for (int k = 0; k < matrix.length; k++) {
+			for (int i = 0; i < matrix.length; i++) {
+ 				for (int j = 0; j < matrix.length; j++) {
+ 					if(i!=j){
+						if((min =Math.min(matrix[i][k],matrix[k][j])) > matrix[i][j]){
+ 							matrix[i][j] = min;
+ 							paths[i][j] = k;
+						}
+					}
+				}
+			}
+		}		
 	}
 
 	public void printMatrix(){
 		for (int i = 0; i < matrix.length; i++) {
 			for (int j = 0; j < matrix.length; j++) {
-				if(matrix[i][j]== Integer.MIN_VALUE){
+				if(i==j){
 					System.out.print("*\t");
 				}
 				else{
@@ -39,23 +62,27 @@ public class IslandsPath {
 	}
 	
 	public void printCostsMatrix() {
-		// TODO Auto-generated method stub
-		
+		printMatrix();
 	}
 
 	public void printPaths() {
-		// TODO Auto-generated method stub
-		
-	}
-	
-	public void method(){
-		for (int k = 0; k < matrix.length; k++) {
-			for (int i = 0; i < matrix.length; i++) {
-				for (int j = 0; j < matrix.length; j++) {
-					
+		for (int i = 0; i < paths.length; i++) {
+			for (int j = 0; j < paths.length; j++) {
+				if(i!=j){
+					System.out.println(i+" -- "+pathBetween(i, j)+j);
 				}
 			}
 		}
 	}
-		
+	
+	public String pathBetween(int i, int j){
+		String aux = "";
+		int k = paths[i][j];
+		if(k>=0){
+			aux+=pathBetween(i,k);
+			aux+=" "+k+" -- ";
+			aux+=pathBetween(k, j);
+		}
+		return aux;
+	}		
 }

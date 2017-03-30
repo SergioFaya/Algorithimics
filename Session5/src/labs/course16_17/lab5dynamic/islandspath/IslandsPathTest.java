@@ -15,7 +15,7 @@ public class IslandsPathTest {
 	@Test
 	public void test1() throws IOException {
 		IslandsPath problem = new IslandsPath("files/islands01.txt");
-		problem.printMatrix();
+		problem.printMatrix();//Added by me
 		executeFromFile(problem);
 		assertTrue(problem.sumCostsMatrix() == 16);
 	}
@@ -23,6 +23,7 @@ public class IslandsPathTest {
 	@Test
 	public void test2() throws IOException {
 		IslandsPath problem = new IslandsPath("files/islands02.txt");
+		problem.printMatrix();//Added by me
 		executeFromFile(problem);
 		assertTrue(problem.sumCostsMatrix() == 49);
 	}
@@ -30,6 +31,7 @@ public class IslandsPathTest {
 	@Test
 	public void test3() throws IOException {
 		IslandsPath problem = new IslandsPath("files/islands03.txt");
+		problem.printMatrix();//Added by me
 		executeFromFile(problem);
 		assertTrue(problem.sumCostsMatrix() == 10);
 	}

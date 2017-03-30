@@ -32,7 +32,7 @@ public  class MyFileHandler {
 		}
 		
 		for (int i = 0; i < matrix.length; i++) {
-			matrix[i][i] = Integer.MIN_VALUE;
+			matrix[i][i] = 0;
 		}
 		reader.close();
 		return matrix;
