@@ -1,33 +1,134 @@
 package pack;
+import java.io.*;
 
-import java.io.IOException;
 
-public class PyramidSolver {
-	private int[][] pyramid,colors;
-	private int size;
-	private boolean wasFound = false;
+public class Backtracking
+{
 	
-	public PyramidSolver(String path){
+	int [][] pyramid;
+	int [][] pyramid2;
+	private int size;
+	boolean wasFound;
+	
+	public static void main(String []args)
+	{
+		Backtracking a = new Backtracking();
+		a.readFile();
+		a.wasFound=false;
+		a.print();
+		int[]zero = new int[2];
+		zero = a.findZero(a.size-1, -1); //we start here to look for the next available (empty) position starting from 0,0
+		
+		a.backtracking(zero[0], zero[1]);
+		
+		System.out.println();
+		
+	}
+	
+	
+	public void readFile() 
+	{
+		String linea = "";
 		try {
-			MyFileHandler handler = new MyFileHandler();
-			size = handler.readFile(path);
-			pyramid = handler.getPyramid();
-			colors= handler.getColors();
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.err.println("Wrong path or file name");
+			BufferedReader file = new BufferedReader(new FileReader("files/case4.txt"));
+			size = Integer.parseInt(file.readLine());
+			pyramid = new int [size][size];
+			pyramid2 = new int [size][size];
+			int i=0;
+			while (file.ready()) {
+				linea = file.readLine();
+				String[] trozos = linea.split(" ");
+					for(int j=0;j<trozos.length;j++)
+					{
+						if(trozos[j].equals("R"))
+						{
+							pyramid[i][j]=-1;
+							pyramid2[i][j]=-2;
+						}
+						else if(trozos[j].equals("B"))
+						{
+							pyramid[i][j]=-1;
+							pyramid2[i][j]=-3;
+						}
+						else if(trozos[j].equals("Y"))
+						{
+							pyramid[i][j]=-1;
+							pyramid2[i][j]=-4;
+						}
+						else if(trozos[j].equals("*"))
+						{
+							pyramid[i][j]=-1;
+							pyramid2[i][j]=-1;
+						}
+						else if(trozos[j]!=null)
+						{
+							pyramid[i][j]=Integer.parseInt(trozos[j]);
+							pyramid2[i][j]=Integer.parseInt(trozos[j]);
+						}
+					}
+					i++;
+			}
+			file.close();
+			for(int k=0;k<size;k++)
+				for(int j=0;j<size;j++)
+				{
+					if(pyramid[k][j]==0)
+					{
+						pyramid[k][j]=-1;
+						pyramid2[k][j]=-1;
+					}
+					else if(pyramid2[k][j]==-1)
+					{
+						pyramid[k][j]=0;
+						pyramid2[k][j]=0;
+					}
+					else if(pyramid2[k][j]==-2)
+					{
+						pyramid[k][j]=0;
+					}
+					else if(pyramid2[k][j]==-3)
+					{
+						pyramid[k][j]=0;
+					}
+					else if(pyramid2[k][j]==-4)
+					{
+						pyramid[k][j]=0;
+					}
+					
+				}
+		}
+		
+		
+		catch (FileNotFoundException fnfe) {
+			new RuntimeException("File not found");
+		}
+		catch (IOException ioe) {
+			new RuntimeException("Error I/O");
 		}
 	}
 	
-	boolean checkColors(int i, int j, int k)
+	void print()
 	{
-		if(colors[i][j]==-2)
+		for(int i=0;i<pyramid.length;i++)
+		{
+			for(int j=0;j<pyramid[i].length;j++)
+			{
+				if(pyramid[i][j]!=-1)
+					System.out.print(pyramid[i][j]);
+			}
+			System.out.println();
+		}
+	}
+	
+	boolean checkColor(int i, int j, int k)
+	{
+		if(pyramid2[i][j]==-2)
 		{
 			for(int x=0;x<size;x++)
 			{
 				for(int y=0;y<size;y++)
 				{
-					if(colors[x][y]==-2)
+					if(pyramid2[x][y]==-2)
 					{
 						pyramid[x][y]=k;
 						return true;
@@ -35,13 +136,13 @@ public class PyramidSolver {
 				}
 			}
 		}
-		else if(colors[i][j]==-3)
+		else if(pyramid2[i][j]==-3)
 		{
 			for(int x=0;x<size;x++)
 			{
 				for(int y=0;y<size;y++)
 				{
-					if(colors[x][y]==-3)
+					if(pyramid2[x][y]==-3)
 					{
 						pyramid[x][y]=k;
 						return true;
@@ -49,13 +150,13 @@ public class PyramidSolver {
 				}
 			}
 		}
-		else if(colors[i][j]==-4)
+		else if(pyramid2[i][j]==-4)
 		{
 			for(int x=0;x<size;x++)
 			{
 				for(int y=0;y<size;y++)
 				{
-					if(colors[x][y]==-4)
+					if(pyramid2[x][y]==-4)
 					{
 						pyramid[x][y]=k;
 						return true;
@@ -69,28 +170,6 @@ public class PyramidSolver {
 		}
 		return false;
 	}
-	
-	private boolean iterate(int x, int y,int k,int colorNum){
-		for (int i = 0; i < size; i++) {
-			for (int j = 0; j < size; j++) {
-				if(colors[x][y]== colorNum){
-					pyramid[x][y] = k;
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-	
-	public void print(){
-		for (int i = 0; i < pyramid.length; i++) {
-			for (int j = 0; j < pyramid.length; j++) {
-				if(pyramid[i][j]!=-1)
-					System.out.print(pyramid[i][j]+"\t");
-			}
-			System.out.println();
-		}
-	}	
 	
 	boolean checkSumOrRest1(int i, int j, int k)
 	{
@@ -191,8 +270,9 @@ public class PyramidSolver {
 		}
 		else
 			for (int k=1; k<=9; k++) { //from 1 to n
-				if (!wasFound && checkSumOrRest1(x,y,k) && checkSumOrRest2(x,y,k) && checkSumOrRest3(x,y,k) && checkColors(x,y,k)) { 
+				if (!wasFound && checkSumOrRest1(x,y,k) && checkSumOrRest2(x,y,k) && checkSumOrRest3(x,y,k) && checkColor(x,y,k)) { 
 					pyramid[x][y] = k; //mark
+					
 					int[]zero = new int[2];
 					zero = findZero(x,y);
 					backtracking(zero[0], zero[1]);
@@ -219,21 +299,4 @@ public class PyramidSolver {
 		nul[1]=y;
 		return nul;
 	}
-	
-	
-	public static void main(String[] args) throws IOException {
-		for (int i = 1; i < 16; i++) {
-			System.out.println("case  "+i);
-			PyramidSolver solver = new PyramidSolver("files/case"+i+".txt");
-			solver.print();
-			System.out.println();
-			int[]zero = new int[2];
-			zero = solver.findZero(solver.size-1, -1); //we start here to look for the next available (empty) position starting from 0,0
-			solver.backtracking(zero[0], zero[1]);
-			System.out.println();
-			
-			
-		}
-	}
-	
 }
