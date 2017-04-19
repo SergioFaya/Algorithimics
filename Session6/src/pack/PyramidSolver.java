@@ -4,17 +4,10 @@ import java.io.IOException;
 import java.util.function.Predicate;
 
 public class PyramidSolver {
-<<<<<<< HEAD
+
 	private int[][] pyramid,colors;
 	private int size;
 	private boolean wasFound = false;
-=======
-
-	int [][] pyramid;
-	boolean wasFound = false;
-	public static Predicate<int,int> check1= (x,y)-> pyramid[x+1][y] + pyramid[x+1][y+1] == pyramid[x][y]?true:false;
->>>>>>> a9d310b36366bc5e41e145107e31a029558161bd
-	
 	public PyramidSolver(String path){
 		try {
 			MyFileHandler handler = new MyFileHandler();
@@ -27,7 +20,6 @@ public class PyramidSolver {
 		}
 	}
 	
-<<<<<<< HEAD
 	boolean checkColors(int i, int j, int k)
 	{
 		if(colors[i][j]==-2)
@@ -91,10 +83,7 @@ public class PyramidSolver {
 		return false;
 	}
 	
-	public void print(){
-=======
 	public void print() {
->>>>>>> a9d310b36366bc5e41e145107e31a029558161bd
 		for (int i = 0; i < pyramid.length; i++) {
 			for (int j = 0; j < pyramid.length; j++) {
 				if(pyramid[i][j]!=-1)
@@ -125,7 +114,7 @@ public class PyramidSolver {
 	}
 	
 	
-<<<<<<< HEAD
+
 
 	boolean checkSumOrRest2(int i, int j, int k)
 	{
@@ -250,26 +239,3 @@ public class PyramidSolver {
 	}
 	
 }
-=======
-	public void backtracking(int x, int y) {
-		int n = pyramid.length;
-		if (x==n) { //we found a solution (AND FINISH)
-			wasFound = true;
-			System.out.println("SOLUTION FOUND:");
-			print();
-		}
-		else
-			for (int k=1; k<=n; k++) { //from 1 to n
-				if(!wasFound && check1) {
-					pyramid[x][y] = k; //mark
-					int[]zero = new int[2];
-					backtracking(zero[0], zero[1]);
-					
-					pyramid[x][y] = 0; //unmark
-		   }
-		 }
-	}
-	
-	
-}
->>>>>>> a9d310b36366bc5e41e145107e31a029558161bd
