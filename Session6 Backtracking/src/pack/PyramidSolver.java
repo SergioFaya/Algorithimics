@@ -7,26 +7,38 @@ import java.util.function.Predicate;
 
 public class PyramidSolver {
 
-	private int[][] pyramid, colors;
+	private int[][] pyramid, colors, solution;
 	private int size;
-	private boolean wasFound = false;
+	private boolean wasFound;
+	
 	private ArrayList arrayRandom =  new ArrayList();
 	
-	public PyramidSolver(int[][] pyramid){
+	public PyramidSolver(int[][] pyramid,int[][] colors){
+		this.wasFound = false;
 		this.pyramid = pyramid;
+		this.colors = colors;
+		this.size = pyramid.length;
+		this.solution = new int[size][size];		
+		fillRandomArray();
 	}
-	
-	
-	public PyramidSolver(String path) {
+
+	private void fillRandomArray() {
 		for (int i = 1; i < 10; i++) {
 			arrayRandom.add(i);
 		}
 		Collections.shuffle(arrayRandom);
+	}
+	
+	
+	public PyramidSolver(String path) {
+		this.wasFound = false;
+		fillRandomArray();
 		try {
 			MyFileHandler handler = new MyFileHandler();
 			size = handler.readFile(path);
-			pyramid = handler.getPyramid();
-			colors = handler.getColors();
+			this.pyramid = handler.getPyramid();
+			this.colors = handler.getColors();
+			this.solution = new int[size][size];
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.err.println("Wrong path or file name");
@@ -34,6 +46,8 @@ public class PyramidSolver {
 	}
 
 	public boolean checkColors(int i, int j, int k) {
+		//we look for a copy of the color and in case they are the same we mark the
+		//position returning true, false in case the colors doesn't match and if there is no color return true
 		if (colors[i][j] < -1) {
 			int colornumber = colors[i][j];
 			for (int x = 0; x < size; x++) {
@@ -48,7 +62,9 @@ public class PyramidSolver {
 		}
 		return true;
 	}
+	
 	public void print() {
+		//print with a pyramid shape
 		for (int i = 0; i < pyramid.length; i++) {
 			//print tabs
 			for (int j = 0; j < pyramid.length-i; j++) {
@@ -74,7 +90,6 @@ public class PyramidSolver {
 			return false;
 		}
 	}
-
 	private boolean check2(int i, int j, int k) {
 		if (i == 0) {
 			return true;
@@ -110,8 +125,11 @@ public class PyramidSolver {
 		return true;
 	}
 
+	/*
+	 * REGULAR BACKTRACKING METHOD FOR THE PYRAMID TEST 1,THEN 2 AND SO ON. 	
+	 */
 	public void backtracking(int x, int y) {
-		if (x == -1) { // final solution
+		if (x == -1) { 
 			wasFound = true;
 			System.out.println("SOLUTION FOUND: ");
 			print();
@@ -125,33 +143,45 @@ public class PyramidSolver {
 					int[] zero = new int[2];
 					zero = findZero(x, y);
 					backtracking(zero[0], zero[1]);
-					pyramid[x][y] = 0; // unmark
+					pyramid[x][y] = 0; 
 				}
 			}
 	}
-
+	/*
+	 * RANDOM BACKTRACKING IS USED SPECIALLY FOR THE GENERATOR TO GET A DIFFERENT
+	 *  SOLUTION EVERY TIME (if it exists)
+	 */
 	public void randomBacktracking(int x, int y) {
 		if (x == -1) { // final solution
 			wasFound = true;
 			System.out.println("SOLUTION FOUND: ");
 			print();
+			//Save here the matrix because later it will be destroyed by adding 0s
+			//solution is saved here to use it in the generator
+			for (int i = 0; i < colors.length; i++) {
+				for (int j = 0; j < colors.length; j++) {
+					solution[i][j] = pyramid[i][j];			
+				}
+			}
+			
 		} else
 			for (Object o : arrayRandom) {
+				if(wasFound) break;
 				int k = (int)o;
 				if (!wasFound && check1(x, y, k)
 						&& check2(x, y, k) 
 						&& check3(x, y, k)
 						&& checkColors(x, y, k)) {
-					pyramid[x][y] = k; // mark
+					pyramid[x][y] = k; 
 					int[] zero = new int[2];
 					zero = findZero(x, y);
-					backtracking(zero[0], zero[1]);
-					pyramid[x][y] = 0; // unmark
+					randomBacktracking(zero[0], zero[1]);
+					pyramid[x][y] = 0; 
 				}
 			}
 	}
 	
-	private int[] findZero(int x, int y) { // look for the next position with a 0 (ie.,
+	private int[] findZero(int x, int y) { //look for the next position with a 0 (ie., that it is empty)
 		int[] nul = new int[2];
 		boolean b = true;
 		do {
@@ -184,6 +214,18 @@ public class PyramidSolver {
 			System.out.println("Elapsed Time "+t3);
 
 		}
+		//Test of my generated pyramid
+		PyramidSolver solver = new PyramidSolver("files/generatedPyramid.txt");
+		solver.print();
+		solver.solve();
+		
+	}
+	
+	public int[][] solve(){//method to be called from pyramid generator
+		int[] zeros = new int[2];
+		zeros = findZero(size - 1, -1);
+		randomBacktracking(zeros[0], zeros[1]);
+		return solution;
 	}
 
 }
