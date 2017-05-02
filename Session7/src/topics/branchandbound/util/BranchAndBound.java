@@ -28,8 +28,8 @@ public class BranchAndBound {
 	public void branchAndBound(Node rootNode) { 
 		ds.insert(rootNode); //First node to be explored
 	
-		pruneLimit = rootNode.initialValuePruneLimit();
-
+		pruneLimit = rootNode.initialValuePruneLimit();//Max Integer
+		//While there are remaining nodes with an better heuristic than the best case found
 		while (!ds.empty() && ds.estimateBest() < pruneLimit) {
 			Node node = ds.extractBestNode();	
 			

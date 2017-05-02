@@ -1,6 +1,8 @@
 package pack;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 
 public class MyFileHandler {
 	private int[][] pyramid, pyramidColors;
@@ -14,11 +16,14 @@ public class MyFileHandler {
 	}
 	
 	public int readFile(String path) throws IOException{
+		//nHoles is equal to the numeber of * and half of the colors(as once a color have been found the other color must be equal)
+		int nHoles = 0;
 		BufferedReader reader = new BufferedReader(new FileReader(path));
 		String size = reader.readLine();
 		int sizeint = Integer.parseInt(size.trim());
 		pyramid = new int[sizeint][sizeint];
 		pyramidColors= new int[sizeint][sizeint];
+		
 		for (int i = 0; i < sizeint; i++) {
 			for (int j = 0; j < sizeint; j++) {
 				pyramid[i][j]= -1;
@@ -43,6 +48,7 @@ public class MyFileHandler {
 				}else if(pieces[i].equals("*")){
 					pyramid[linenumber][i] = 0;
 					pyramidColors[linenumber][i] = -1;
+					//Asterisks count double 
 				}else if(pieces[i] != null){
 					pyramid[linenumber][i] = Integer.parseInt(pieces[i]);
 					pyramidColors[linenumber][i] = Integer.parseInt(pieces[i]);
